@@ -71,7 +71,7 @@ void showFontInfo(const char* font_name, bool is_bold, bool is_italic,
 }//showFontInfo
 
 //write ALTO format 
-void writeXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api)
+void writeGlyphXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api)
 {
     int rc;
     xmlTextWriterPtr writer;
@@ -88,7 +88,7 @@ void writeXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api)
         /* Create a new XmlWriter for file, with no compression. */
         writer = xmlNewTextWriterFilename(alto_file, 0);
         if (writer == NULL) {
-            printf("writeXmltoFile: Error creating the xml writer\n");
+            printf("writeGlyphXmltoFile: Error creating the xml writer\n");
             return;
         }
         xmlTextWriterSetIndent(writer,1);
@@ -99,12 +99,9 @@ void writeXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api)
             "see also Glyph discussion: https://github.com/altoxml/schema/issues/26");
  
 
-        //Glyph symbol syntax not decided yet in ALTO so don't use
-        //namespace yet, see: https://github.com/altoxml/schema/issues/26
-        /* when decided on, use this:
         xmlTextWriterStartElementNS(writer, BAD_CAST "alto", BAD_CAST "TextBlock", 
             BAD_CAST "http://www.loc.gov/standards/alto/ns-v2#");
-        */
+
         xmlTextWriterStartElement(writer, BAD_CAST "TextBlock");
         xmlTextWriterWriteAttribute(writer, BAD_CAST "ID", BAD_CAST "A1");
 
@@ -131,7 +128,7 @@ void writeXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api)
                 if (word_started) xmlTextWriterEndElement(writer);
                 xmlTextWriterStartElement(writer, BAD_CAST "String");
                 word_started = true;
-                //TODO: push through font informatiion in ALTO
+                //TODO: push through font information in ALTO
                 /*
                 printf("---->Start word\n");
                 const char *font_name = ri->WordFontAttributes(&bold,   
@@ -149,16 +146,19 @@ void writeXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api)
                     const char* choice = ci.GetUTF8Text();
                     if (start) {
                         xmlTextWriterStartElement(writer, BAD_CAST "Glyph");
+                        xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "CONTENT","%s",choice);
                         xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "HPOS","%d",x1);
                         xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "VPOS","%d",y1);
                         xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "WIDTH","%d",(x2 - x1));
                         xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "HEIGHT","%d",(y2 - y1));
+                        xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "GC","%2.6lf",ci.Confidence());
                         start = false;
-                    } 
-                    xmlTextWriterStartElement(writer, BAD_CAST "Variant");
-                    xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "VC","%2.6lf",ci.Confidence());
-                    xmlTextWriterWriteFormatString(writer,"%s",choice);
-                    xmlTextWriterEndElement(writer);
+                    } else { 
+                        xmlTextWriterStartElement(writer, BAD_CAST "Variant");
+                        xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "VC","%2.6lf",ci.Confidence());
+                        xmlTextWriterWriteFormatString(writer,"%s",choice);
+                        xmlTextWriterEndElement(writer);
+                    }//if
                 } while(ci.Next());
                 if (!start) xmlTextWriterEndElement(writer);
             }//if
@@ -267,7 +267,7 @@ int main(int argc, char* argv[])
         char *quick_text = api->GetUTF8Text();
         fprintf(stdout,"%s",quick_text);
     } else {
-        writeXmltoFile(alto_file.c_str(), api);
+        writeGlyphXmltoFile(alto_file.c_str(), api);
     }//if
 
     // Destroy used object and release memory
