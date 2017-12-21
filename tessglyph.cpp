@@ -1,7 +1,7 @@
 /*
     tessglyph.cpp - extract detailed glyph information and/or quick text using Tesseract API
 
-        ./tessglyph -c [config] -e [engine] -i [image] -l [lang] -p [psm] -o [output] -q (quick)
+        -c [config] -e [engine] -i [image] -l [lang] -p [psm] -o [output] -q (quick) -b (both)
         note: psm is based on Tesseract numbers, see tesseract --help-psm
               engine is based on Tesseract numbers, see tesseract --help-oem
  
@@ -21,6 +21,7 @@ using std::string;
 #include <leptonica/allheaders.h>
 
 #define UTF8_ENCODING "UTF-8"
+#define ODW_ENGINE 100
 
 tesseract::PageSegMode sortOutPsms(int psm)
 {
@@ -49,11 +50,13 @@ tesseract::OcrEngineMode sortOutEngines(int engine)
     if (engine == 3) return tesseract::OEM_DEFAULT;
     if (engine == 4) return tesseract::OEM_CUBE_ONLY;
     if (engine == 5) return tesseract::OEM_TESSERACT_CUBE_COMBINED;
+    //ODW uses LSTM but makes legacy call for font name
+    if (engine == 100) return tesseract::OEM_LSTM_ONLY;
     return tesseract::OEM_DEFAULT;
 }//sortOutEngines
 
 
-//all this is destined for ALTO goodness
+//utility function for font info
 void showFontInfo(const char* font_name, bool is_bold, bool is_italic, 
     bool is_underlined, bool is_monospace, bool is_serif, bool is_smallcaps,
     int pointsize, int font_id) 
@@ -70,8 +73,8 @@ void showFontInfo(const char* font_name, bool is_bold, bool is_italic,
     printf("      font_id: %d\n", font_id);
 }//showFontInfo
 
-//write ALTO format 
-void writeGlyphXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api)
+//write gylph & font details in ALTO format
+void writeGlyphXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api, tesseract::TessBaseAPI *legacy_api)
 {
     int rc;
     xmlTextWriterPtr writer;
@@ -82,15 +85,17 @@ void writeGlyphXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api)
 
     // Get OCR result
     tesseract::ResultIterator* ri = api->GetIterator();
+    tesseract::ResultIterator* lri = legacy_api->GetIterator();
     tesseract::PageIteratorLevel level = tesseract::RIL_SYMBOL;
+    tesseract::PageIteratorLevel wlevel = tesseract::RIL_WORD;
 
     if(ri != 0) {
-        /* Create a new XmlWriter for file, with no compression. */
+        /* note there is no compression. */
         writer = xmlNewTextWriterFilename(alto_file, 0);
         if (writer == NULL) {
             printf("writeGlyphXmltoFile: Error creating the xml writer\n");
             return;
-        }
+        }//if
         xmlTextWriterSetIndent(writer,1);
         xmlTextWriterStartDocument(writer, NULL, UTF8_ENCODING, NULL);
 
@@ -99,44 +104,54 @@ void writeGlyphXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api)
             "see also Glyph discussion: https://github.com/altoxml/schema/issues/26");
  
 
-        xmlTextWriterStartElementNS(writer, BAD_CAST "alto", BAD_CAST "TextBlock", 
-            BAD_CAST "http://www.loc.gov/standards/alto/ns-v2#");
-
         xmlTextWriterStartElement(writer, BAD_CAST "TextBlock");
-        xmlTextWriterWriteAttribute(writer, BAD_CAST "ID", BAD_CAST "A1");
 
-        //bool block_started = false;
-        //bool line_started = false;
         bool word_started = false;
         do {
             const char* symbol = ri->GetUTF8Text(level);
-            //skip PARA & TEXTLINE for now - sometimes sequence is off  
-            // - also, probably better to use geometry approach?
-            /*
-            if (ri->IsAtBeginningOf(tesseract::RIL_PARA)) { 
-                if (block_started) xmlTextWriterEndElement(writer);
-                xmlTextWriterStartElement(writer, BAD_CAST "TextBlock");
-                block_started = true;
-            }
-            if (ri->IsAtBeginningOf(tesseract::RIL_TEXTLINE)) { 
-                if (line_started) xmlTextWriterEndElement(writer);
-                xmlTextWriterStartElement(writer, BAD_CAST "TextLine");
-                line_started = true;
-            }
-            */
             if (symbol != 0 && ri->IsAtBeginningOf(tesseract::RIL_WORD)) {
                 if (word_started) xmlTextWriterEndElement(writer);
+                const char* word = ri->GetUTF8Text(wlevel);
+                float conf = ri->Confidence(wlevel);
+                int wx1, wy1, wx2, wy2;
+                ri->BoundingBox(wlevel, &wx1, &wy1, &wx2, &wy2);
                 xmlTextWriterStartElement(writer, BAD_CAST "String");
-                word_started = true;
-                //TODO: push through font information in ALTO
-                /*
-                printf("---->Start word\n");
+                        
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "CONTENT","%s",word);
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "WC","%2.6lf",conf);
+                delete[] word;
+
                 const char *font_name = ri->WordFontAttributes(&bold,   
-                   &italic, &underlined,&monospace, &serif, &smallcaps,&pointsize, &font_id);
-                showFontInfo(font_name,bold,italic,underlined,monospace,serif,smallcaps,
-                    pointsize,font_id);
+                   &italic, &underlined,&monospace, &serif, &smallcaps, &pointsize, &font_id);
+
+                /*
+                    ALTO would not specify this information here but segmentation is
+                    handled externally for ODW newspapers and this stores information
+                    for defining textstyles downstream.
                 */
-            }
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "BOLD","%d",bold);
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "ITALIC","%d",italic);
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "UNDERLINED","%d",underlined);
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "MONOSPACE","%d",monospace);
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "SERIF","%d",serif);
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "SMALLCAPS","%d",smallcaps);
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "POINTSIZE","%d",pointsize);
+
+                if (font_name != NULL) {
+                    xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "FONT","%s",font_name);
+                }//if
+
+                if (lri != 0 && font_name == NULL) { 
+                     const char *legacy_font_name = lri->WordFontAttributes(&bold,   
+                         &italic, &underlined,&monospace, &serif, &smallcaps, &pointsize, &font_id);
+                     if (legacy_font_name != NULL) {
+                         xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "FONT","%s",legacy_font_name);
+                     }//if
+                     lri->Next(wlevel);
+                }//if
+
+                word_started = true;
+            }//if
             if (symbol != 0) {
                 int x1, y1, x2, y2;
                 ri->BoundingBox(level, &x1, &y1, &x2, &y2);
@@ -167,13 +182,11 @@ void writeGlyphXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api)
         } while((ri->Next(level)));
                 
         if (word_started) xmlTextWriterEndElement(writer);
-        //if (line_started) xmlTextWriterEndElement(writer);
-        //if (block_started)xmlTextWriterEndElement(writer);
         xmlTextWriterEndElement(writer); //TextBlock end
     }//if
 
     xmlFreeTextWriter(writer);
-}
+}//writeGlyphXmltoFile
 
 int main(int argc, char* argv[])
 {
@@ -182,6 +195,7 @@ int main(int argc, char* argv[])
     const char* default_alto = "alto.xml";
     int default_psm = 4;
     bool quick_flag = false;
+    bool both_flag = false;
     int default_engine = 3;
     const char *config = "config"; 
  
@@ -242,10 +256,12 @@ int main(int argc, char* argv[])
             }//if  
         }//if 
         if (std::string(argv[i]) == "-q") quick_flag = true;
+        if (std::string(argv[i]) == "-b") both_flag = true;
     }//for
 
     //set up API
     tesseract::TessBaseAPI *api = new tesseract::TessBaseAPI();
+    tesseract::TessBaseAPI *legacy_api = new tesseract::TessBaseAPI();
     api->SetPageSegMode(sortOutPsms(psm));
     
     char *configs[]={(char *)config};
@@ -258,22 +274,34 @@ int main(int argc, char* argv[])
         exit(1);
     }//if
 
+    if (engine == ODW_ENGINE) {
+        legacy_api->Init(NULL, lang.c_str(), sortOutEngines(0), 
+            configs, configs_size, NULL, NULL, false);
+        legacy_api->SetPageSegMode(sortOutPsms(psm));
+    }//if
+
     Pix *image = pixRead(img.c_str());
+ 
     api->SetImage(image);
     //Important
     api->Recognize(NULL);
 
-    if (quick_flag) {
-        char *quick_text = api->GetUTF8Text();
-        fprintf(stdout,"%s",quick_text);
-    } else {
-        writeGlyphXmltoFile(alto_file.c_str(), api);
+    if (engine == ODW_ENGINE) {
+        legacy_api->SetImage(image);
+        legacy_api->Recognize(NULL);
     }//if
 
-    // Destroy used object and release memory
+    if (quick_flag || both_flag) {
+        char *quick_text = api->GetUTF8Text();
+        fprintf(stdout,"%s",quick_text);
+    }//if 
+    if (!quick_flag) writeGlyphXmltoFile(alto_file.c_str(), api, legacy_api);
+
+    //Destroy used objects and release memory
     api->End();
+    legacy_api->End();
     pixDestroy(&image);
-                
+
 
     return 0;
-}
+}//main
