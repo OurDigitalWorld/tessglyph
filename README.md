@@ -34,19 +34,19 @@ time. The options provided are:
 -c
     Tesseract config file (if desired)
 -e
-    Tesseract engine number, see _tesseract --help-oem_
+    Tesseract engine number, see tesseract --help-oem
 -i
     input image (defaults to "default.jpg")
 -l
     language code for OCR (defaults to "eng")
 -p
-    Tesseract psm number, see _tesseract --help-psm_ 
+    Tesseract psm number, see tesseract --help-psm 
 -o
     output file (defaults to "alto.xml")
 -q
-    _quick_ flag, for producing text only on stdout
+    quick flag, for producing text only on stdout
 -b
-    _both_ flag, for producing both text on stdout and XML file at the same time
+    both flag, for producing both text on stdout and XML file at the same time
 ```
 
 We often make use of Tesseract's 
