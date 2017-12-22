@@ -55,7 +55,6 @@ tesseract::OcrEngineMode sortOutEngines(int engine)
     return tesseract::OEM_DEFAULT;
 }//sortOutEngines
 
-
 //utility function for font info
 void showFontInfo(const char* font_name, bool is_bold, bool is_italic, 
     bool is_underlined, bool is_monospace, bool is_serif, bool is_smallcaps,
@@ -103,7 +102,6 @@ void writeGlyphXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api, tes
             "Simple layout based on ALTO, see: https://www.loc.gov/standards/alto/",
             "see also Glyph discussion: https://github.com/altoxml/schema/issues/26");
  
-
         xmlTextWriterStartElement(writer, BAD_CAST "TextBlock");
 
         bool word_started = false;
@@ -301,7 +299,6 @@ int main(int argc, char* argv[])
     api->End();
     legacy_api->End();
     pixDestroy(&image);
-
 
     return 0;
 }//main
