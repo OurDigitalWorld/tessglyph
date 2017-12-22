@@ -12,11 +12,10 @@ segment pages into the
 to process individual paragraphs with Tesseract. This means that Tesseract 
 typically does not see the entire page at once and we overload the 
 _String_ element with font details, and then sort out the
-ultimate _ALTO_ representation after the page has been processed. For example:
+ultimate ALTO representation after the page has been processed. For example:
 
 ```xml
- <String CONTENT="This" WC="96.144791" BOLD="0" ITALIC="0" UNDERLINED="0" MONOSP
-ACE="0" SERIF="0" SMALLCAPS="53" POINTSIZE="11" FONT="Arial">
+ <String CONTENT="This" WC="96.144791" BOLD="0" ITALIC="0" UNDERLINED="0" MONOSPACE="0" SERIF="0" SMALLCAPS="53" POINTSIZE="11" FONT="Arial">
   <Glyph CONTENT="T" HPOS="36" VPOS="92" WIDTH="14" HEIGHT="24" GC="99.558067"/>
    <Variant VC="69.500244">+</Variant>
   </Glyph>
@@ -56,7 +55,7 @@ work around this, we define an _engine number_ of 100 to invoke both the
 LSTM engine and the legacy engine. In this scenario, the legacy engine 
 provides only font identification. This is an expensive workaround in terms 
 of computation but is currently the only option for extracting fonts 
-in combination with _LSTM_. For more information, see
+in combination with LSTM. For more information, see
 this [Tesseract issue](https://github.com/tesseract-ocr/tesseract/issues/1074).
 
 A typical invocation for us would be:
@@ -66,5 +65,5 @@ A typical invocation for us would be:
 ```
 
 Again, this is in the context of using external segmentation and producing 
-an _ALTO_ file further downstream.
+an ALTO file further downstream.
  
