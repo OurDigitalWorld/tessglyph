@@ -48,9 +48,11 @@ tesseract::OcrEngineMode sortOutEngines(int engine)
     if (engine == 1) return tesseract::OEM_LSTM_ONLY;
     if (engine == 2) return tesseract::OEM_TESSERACT_LSTM_COMBINED;
     if (engine == 3) return tesseract::OEM_DEFAULT;
-    if (engine == 4) return tesseract::OEM_CUBE_ONLY;
-    if (engine == 5) return tesseract::OEM_TESSERACT_CUBE_COMBINED;
-    //ODW uses LSTM but makes legacy call for font name
+    /*
+        Use LSTM but make legacy call for font name, note that 
+        OEM_TESSERACT_LSTM_COMBINED will sometimes give
+        font information and is far more efficient.
+    */
     if (engine == 100) return tesseract::OEM_LSTM_ONLY;
     return tesseract::OEM_DEFAULT;
 }//sortOutEngines
@@ -123,16 +125,16 @@ void writeGlyphXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api, tes
                    &italic, &underlined,&monospace, &serif, &smallcaps, &pointsize, &font_id);
 
                 /*
-                    ALTO would not specify this information here but segmentation is
-                    handled externally for ODW newspapers and this stores information
+                    ALTO would not specify this information here but page segmentation is
+                    typically handled externally for ODW newspapers and this stores information
                     for defining textstyles downstream.
                 */
-                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "BOLD","%d",bold);
-                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "ITALIC","%d",italic);
-                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "UNDERLINED","%d",underlined);
-                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "MONOSPACE","%d",monospace);
-                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "SERIF","%d",serif);
-                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "SMALLCAPS","%d",smallcaps);
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "BOLD","%d",(bold > 0 ? 1:0));
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "ITALIC","%d",(italic > 0 ? 1:0));
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "UNDERLINED","%d",(underlined > 0 ? 1:0));
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "MONOSPACE","%d",(monospace > 0 ? 1:0));
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "SERIF","%d",(serif > 0 ? 1:0));
+                xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "SMALLCAPS","%d",(smallcaps > 0 ? 1:0));
                 xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "POINTSIZE","%d",pointsize);
 
                 if (font_name != NULL) {
