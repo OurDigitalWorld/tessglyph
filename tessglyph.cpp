@@ -47,12 +47,6 @@ tesseract::OcrEngineMode sortOutEngines(int engine)
     if (engine == 1) return tesseract::OEM_LSTM_ONLY;
     if (engine == 2) return tesseract::OEM_TESSERACT_LSTM_COMBINED;
     if (engine == 3) return tesseract::OEM_DEFAULT;
-    /*
-        Use LSTM but make legacy call for font name, note that 
-        OEM_TESSERACT_LSTM_COMBINED will sometimes give
-        font information and is far more efficient.
-    */
-    if (engine == 100) return tesseract::OEM_LSTM_ONLY;
     return tesseract::OEM_DEFAULT;
 }//sortOutEngines
 
