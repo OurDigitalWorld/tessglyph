@@ -2,15 +2,15 @@
 
 The [Tesseract OCR system](https://github.com/tesseract-ocr) has a powerful 
 API that opens up access to the internals of its OCR processing, including the 
-variants considered for individual characters/gylphs. This program provides the building blocks for including detailed
-variant and font information in the 
+variants considered for individual characters/gylphs. This program provides the 
+building blocks for including detailed variant and font information in the 
 [ALTO XML format](https://www.loc.gov/standards/alto/). Our workflow typically involves 
 the use of the 
 [Olena project](http://www.lrde.epita.fr/cgi-bin/twiki/view/Olena/WebHome) to 
 segment pages into the 
 [PAGE format](http://schema.primaresearch.org/tools/PAGELibraries), and then 
 to process individual paragraphs with Tesseract. This means that Tesseract 
-typically does not see the entire page at once and we overload the 
+typically does not see the entire page at once so we overload the 
 _String_ element with font details, and then sort out the
 ultimate ALTO representation after the page has been processed. For example:
 
@@ -50,15 +50,15 @@ time. The options provided are:
 
 We often make use of Tesseract's 
 [LSTM option](https://github.com/tesseract-ocr/tesseract/wiki/4.0-with-LSTM)
-but it does not currently provide font identification through the API. For one
-workaround for this, we define an _engine number_ of 100 to invoke both the
-LSTM engine and the legacy engine. In this scenario, the legacy engine 
-provides only font identification but this is an expensive workaround in terms 
-of computation. Giving an _engine number_ of 2 will sometimes produce font
-details. For more information, see
+though it does not currently provide font identification through the API. We
+did use a workaround for this, which would invoke both the
+LSTM engine and the legacy engine, but this is expensive computationally
+and there are other approaches to getting font information, so we no longer
+provide this option. Note that using an _engine number_ of 2 will sometimes 
+produce font details. For more information, see
 this [Tesseract issue](https://github.com/tesseract-ocr/tesseract/issues/1074).
 
-A typical invocation for us would be:
+A typical invocation would be:
 
 ```
 ./tessglyph -e 2 -o phototest.xml -p 6 -i phototest.tif -b > phototest.txt

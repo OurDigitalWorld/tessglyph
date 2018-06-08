@@ -21,7 +21,6 @@ using std::string;
 #include <leptonica/allheaders.h>
 
 #define UTF8_ENCODING "UTF-8"
-#define ODW_ENGINE 100
 
 tesseract::PageSegMode sortOutPsms(int psm)
 {
@@ -75,7 +74,7 @@ void showFontInfo(const char* font_name, bool is_bold, bool is_italic,
 }//showFontInfo
 
 //write gylph & font details in ALTO format
-void writeGlyphXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api, tesseract::TessBaseAPI *legacy_api)
+void writeGlyphXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api)
 {
     int rc;
     xmlTextWriterPtr writer;
@@ -86,7 +85,6 @@ void writeGlyphXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api, tes
 
     // Get OCR result
     tesseract::ResultIterator* ri = api->GetIterator();
-    tesseract::ResultIterator* lri = legacy_api->GetIterator();
     tesseract::PageIteratorLevel level = tesseract::RIL_SYMBOL;
     tesseract::PageIteratorLevel wlevel = tesseract::RIL_WORD;
 
@@ -139,15 +137,6 @@ void writeGlyphXmltoFile(const char *alto_file, tesseract::TessBaseAPI *api, tes
 
                 if (font_name != NULL) {
                     xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "FONT","%s",font_name);
-                }//if
-
-                if (lri != 0 && font_name == NULL) { 
-                     const char *legacy_font_name = lri->WordFontAttributes(&bold,   
-                         &italic, &underlined,&monospace, &serif, &smallcaps, &pointsize, &font_id);
-                     if (legacy_font_name != NULL) {
-                         xmlTextWriterWriteFormatAttribute(writer,BAD_CAST "FONT","%s",legacy_font_name);
-                     }//if
-                     lri->Next(wlevel);
                 }//if
 
                 word_started = true;
@@ -261,7 +250,6 @@ int main(int argc, char* argv[])
 
     //set up API
     tesseract::TessBaseAPI *api = new tesseract::TessBaseAPI();
-    tesseract::TessBaseAPI *legacy_api = new tesseract::TessBaseAPI();
     api->SetPageSegMode(sortOutPsms(psm));
     
     char *configs[]={(char *)config};
@@ -274,32 +262,20 @@ int main(int argc, char* argv[])
         exit(1);
     }//if
 
-    if (engine == ODW_ENGINE) {
-        legacy_api->Init(NULL, lang.c_str(), sortOutEngines(0), 
-            configs, configs_size, NULL, NULL, false);
-        legacy_api->SetPageSegMode(sortOutPsms(psm));
-    }//if
-
     Pix *image = pixRead(img.c_str());
  
     api->SetImage(image);
     //Important
     api->Recognize(NULL);
 
-    if (engine == ODW_ENGINE) {
-        legacy_api->SetImage(image);
-        legacy_api->Recognize(NULL);
-    }//if
-
     if (quick_flag || both_flag) {
         char *quick_text = api->GetUTF8Text();
         fprintf(stdout,"%s",quick_text);
     }//if 
-    if (!quick_flag) writeGlyphXmltoFile(alto_file.c_str(), api, legacy_api);
+    if (!quick_flag) writeGlyphXmltoFile(alto_file.c_str(), api);
 
     //Destroy used objects and release memory
     api->End();
-    legacy_api->End();
     pixDestroy(&image);
 
     return 0;
