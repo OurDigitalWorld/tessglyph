@@ -249,6 +249,8 @@ int main(int argc, char* argv[])
     char *configs[]={(char *)config};
     int configs_size = 1;
 
+    if (std::string(config).length() == 0) configs_size = 0;
+
     if (api->Init(NULL, lang.c_str(), sortOutEngines(engine), 
         configs, configs_size, NULL, NULL, false)) 
     {
