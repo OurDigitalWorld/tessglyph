@@ -180,7 +180,7 @@ int main(int argc, char* argv[])
     bool quick_flag = false;
     bool both_flag = false;
     int default_engine = 3;
-    const char *config = "config"; 
+    const char *config = ""; 
  
     std::string lang = default_lang;
     std::string img = default_img;
@@ -249,6 +249,7 @@ int main(int argc, char* argv[])
     char *configs[]={(char *)config};
     int configs_size = 1;
 
+    //in case no config is required
     if (std::string(config).length() == 0) configs_size = 0;
 
     if (api->Init(NULL, lang.c_str(), sortOutEngines(engine), 
