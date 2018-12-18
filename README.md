@@ -65,5 +65,7 @@ A typical invocation would be:
 ```
 
 Again, this is in the context of using external segmentation and producing 
-an ALTO file further downstream.
+an ALTO file further downstream. If you don't need gylph-level information
+in ALTO, Tesseract 
+now [directly supports ALTO as an output format](https://github.com/tesseract-ocr/tesseract/pull/2100).
  
